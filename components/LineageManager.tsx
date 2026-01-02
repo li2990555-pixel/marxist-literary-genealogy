@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lineage, Generation } from '../types';
 import { COLOR_PALETTES } from '../constants';
 import { TrashIcon, PencilSquareIcon, PlusIcon, XMarkIcon, ListBulletIcon, Bars3Icon, CheckIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
@@ -17,17 +17,17 @@ interface LineageManagerProps {
 const LineageManager: React.FC<LineageManagerProps> = ({ 
     isOpen, onClose, lineages, booksCountByLineage, onAdd, onUpdate, onDelete, onReorder
 }) => {
-  // Use local state for drag operations to prevent parent re-renders from killing the drag event
+  // Local state for list
   const [localLineages, setLocalLineages] = useState<Lineage[]>(lineages);
   
+  // Form States
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Lineage>>({});
   const [isAdding, setIsAdding] = useState(false);
   
-  // Drag State
+  // --- ROBUST DRAG & DROP STATE ---
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
+  const [targetIndex, setTargetIndex] = useState<number | null>(null);
 
   // Sync props to local state when not dragging
   useEffect(() => {
@@ -38,38 +38,62 @@ const LineageManager: React.FC<LineageManagerProps> = ({
 
   if (!isOpen) return null;
 
-  // --- Optimized Drag and Drop Handlers ---
+  // --- Handlers: Swap on Drop (Stable) ---
+  
   const handleDragStart = (e: React.DragEvent, index: number) => {
-    dragItem.current = index;
     setDraggedIndex(index);
+    // Setting effectAllowed is good practice
     e.dataTransfer.effectAllowed = "move";
-    // Important: styling needed to indicate drag
+    // Optional: Hide the default ghost image if we wanted custom ones, but default is fine here
   };
 
-  const handleDragEnter = (e: React.DragEvent, index: number) => {
-    dragOverItem.current = index;
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault(); // CRITICAL: Allows the drop event to fire
+    if (draggedIndex === null) return;
     
-    if (dragItem.current === null || dragItem.current === index) return;
-    
-    // Reorder locally
-    const newList = [...localLineages];
-    const draggedItemContent = newList[dragItem.current];
-    newList.splice(dragItem.current, 1);
-    newList.splice(index, 0, draggedItemContent);
-    
-    // Update ref pointers to match new positions
-    dragItem.current = index;
-    setLocalLineages(newList);
-    setDraggedIndex(index);
+    // Only update target index if it changes to avoid excessive re-renders
+    if (targetIndex !== index) {
+        setTargetIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+     // Optional: Clear target index if leaving the container
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+      e.preventDefault();
+      
+      if (draggedIndex === null || draggedIndex === dropIndex) {
+          setDraggedIndex(null);
+          setTargetIndex(null);
+          return;
+      }
+
+      // Reorder Logic
+      const newList = [...localLineages];
+      const draggedItem = newList[draggedIndex];
+      
+      // Remove from old pos
+      newList.splice(draggedIndex, 1);
+      // Insert at new pos
+      newList.splice(dropIndex, 0, draggedItem);
+      
+      // Update State & Notify Parent
+      setLocalLineages(newList);
+      onReorder(newList); // Persist change
+
+      // Reset
+      setDraggedIndex(null);
+      setTargetIndex(null);
   };
 
   const handleDragEnd = () => {
+      // Safety cleanup
       setDraggedIndex(null);
-      dragItem.current = null;
-      dragOverItem.current = null;
-      // Commit changes to parent
-      onReorder(localLineages);
+      setTargetIndex(null);
   };
+
 
   // --- Form Handlers ---
   const startEdit = (l: Lineage) => {
@@ -155,10 +179,11 @@ const LineageManager: React.FC<LineageManagerProps> = ({
         <div className="p-5 overflow-y-auto flex-1 bg-white">
             
             {/* List of Lineages */}
-            <div className="space-y-3">
+            <div className="space-y-3 relative"> 
                 {localLineages.map((lineage, index) => {
                     const isEditingThis = editingId === lineage.id;
 
+                    // --- Editing Mode ---
                     if (isEditingThis) {
                         return (
                              <div key={lineage.id} className="border-2 border-black p-4 bg-stone-50 space-y-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
@@ -241,15 +266,24 @@ const LineageManager: React.FC<LineageManagerProps> = ({
                         );
                     }
 
+                    // --- Draggable List Item ---
+                    const isDragging = draggedIndex === index;
+                    const isTarget = targetIndex === index && draggedIndex !== index;
+                    
                     return (
                         <div 
                             key={lineage.id}
                             draggable={!isFormVisible} 
                             onDragStart={(e) => handleDragStart(e, index)}
-                            onDragEnter={(e) => handleDragEnter(e, index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDrop={(e) => handleDrop(e, index)}
                             onDragEnd={handleDragEnd}
-                            onDragOver={(e) => e.preventDefault()} // Essential to allow drop
-                            className={`flex items-center justify-between p-3 border-b border-stone-200 bg-white hover:bg-stone-50 transition-colors group cursor-grab active:cursor-grabbing ${draggedIndex === index ? 'opacity-30 border-dashed border-black bg-stone-100' : 'opacity-100'}`}
+                            className={`
+                                flex items-center justify-between p-3 border-b bg-white transition-all group
+                                ${!isFormVisible ? 'cursor-grab active:cursor-grabbing' : ''}
+                                ${isDragging ? 'opacity-40 bg-stone-100' : 'opacity-100'}
+                                ${isTarget ? 'border-t-[4px] border-t-black' : 'border-stone-200'}
+                            `}
                         >
                             <div className="flex items-center gap-4 flex-1 pointer-events-none">
                                 <div className="text-stone-300 group-hover:text-black p-1">
