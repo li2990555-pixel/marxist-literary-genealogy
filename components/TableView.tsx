@@ -21,7 +21,8 @@ import {
   ChevronRightIcon, 
   ChevronDownIcon,
   RectangleGroupIcon,
-  XMarkIcon
+  XMarkIcon,
+  PhotoIcon
 } from '@heroicons/react/24/outline';
 
 interface TableViewProps {
@@ -69,6 +70,33 @@ const TableView: React.FC<TableViewProps> = ({ data, lineages, relationDefs, onE
       enableGrouping: true,
       cell: info => <span className="font-mono text-stone-600 font-medium select-all">{info.getValue()}</span>,
     }),
+    columnHelper.accessor('tocUrl', {
+        header: '目录页',
+        enableGrouping: false,
+        enableSorting: false,
+        cell: info => {
+            const url = info.getValue();
+            if (!url) return <span className="text-stone-300 text-xs">-</span>;
+            return (
+                <div className="relative group w-10 h-10">
+                    <img 
+                        src={url} 
+                        alt="TOC" 
+                        className="w-full h-full object-cover rounded border border-stone-200 cursor-zoom-in"
+                        onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.parentElement?.classList.add('bg-stone-100', 'flex', 'items-center', 'justify-center');
+                            if(e.currentTarget.parentElement) e.currentTarget.parentElement.innerHTML = '<span class="text-stone-300 text-[9px]">失效</span>';
+                        }}
+                    />
+                    {/* Hover Zoom Preview */}
+                    <div className="absolute top-0 left-full ml-2 z-50 w-48 h-auto bg-white p-1 rounded shadow-xl border border-stone-200 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 hidden group-hover:block">
+                        <img src={url} alt="Preview" className="w-full h-auto rounded" />
+                    </div>
+                </div>
+            );
+        }
+    }),
     columnHelper.accessor('title', {
       header: '书名',
       enableGrouping: false, // Usually don't group by title unless exact duplicates
@@ -80,7 +108,7 @@ const TableView: React.FC<TableViewProps> = ({ data, lineages, relationDefs, onE
       cell: info => <span className="text-stone-600">{info.getValue()}</span>,
     }),
     columnHelper.accessor('lineageId', {
-      header: '族系',
+      header: '族系 / 分代',
       enableGrouping: true,
       cell: info => {
         const val = info.getValue();
@@ -89,10 +117,21 @@ const TableView: React.FC<TableViewProps> = ({ data, lineages, relationDefs, onE
         const style = lineage ? COLOR_PALETTES[lineage.colorKey] : COLOR_PALETTES['stone'];
         const label = lineage ? lineage.name : '未知族系';
         
+        // Generation Logic
+        const genId = info.row.original.generationId;
+        const generation = lineage?.generations?.find(g => g.id === genId);
+
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${style?.badge || ''}`}>
-            {label}
-          </span>
+            <div className="flex flex-col items-start gap-1">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${style?.badge || ''}`}>
+                    {label}
+                </span>
+                {generation && (
+                    <span className="text-[10px] text-stone-500 font-medium px-1 bg-stone-50 rounded border border-stone-100 ml-1">
+                        ↳ {generation.name}
+                    </span>
+                )}
+            </div>
         );
       },
     }),

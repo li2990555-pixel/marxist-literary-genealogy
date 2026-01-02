@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { RelationDef } from '../types';
-import { TrashIcon, PencilSquareIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, PencilSquareIcon, PlusIcon, XMarkIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 interface RelationManagerProps {
   isOpen: boolean;
@@ -68,7 +68,7 @@ const RelationManager: React.FC<RelationManagerProps> = ({
               <div>
                   <label className="block text-xs font-bold text-stone-500 uppercase mb-1">连线样式 (可视化效果)</label>
                   <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer group">
+                      <label className="flex items-center gap-2 cursor-pointer group bg-white px-3 py-2 rounded border border-stone-200 hover:border-stone-400 transition-all">
                           <input 
                             type="radio" 
                             name="style" 
@@ -76,19 +76,21 @@ const RelationManager: React.FC<RelationManagerProps> = ({
                             onChange={() => setFormData({...formData, style: 'solid'})}
                             className="text-stone-800 focus:ring-stone-500" 
                           />
-                          <span className="text-sm text-stone-700">实线</span>
-                          <div className="w-8 h-0.5 bg-stone-800"></div>
+                          <span className="text-sm text-stone-700 font-medium">实线</span>
+                          <div className="w-8 h-0.5 bg-stone-800 ml-2"></div>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer group">
+                      <label className="flex items-center gap-2 cursor-pointer group bg-white px-3 py-2 rounded border border-stone-200 hover:border-stone-400 transition-all">
                           <input 
                             type="radio" 
                             name="style" 
-                            checked={formData.style === 'dashed'}
-                            onChange={() => setFormData({...formData, style: 'dashed'})}
+                            checked={formData.style === 'none'}
+                            onChange={() => setFormData({...formData, style: 'none'})}
                             className="text-stone-800 focus:ring-stone-500" 
                           />
-                          <span className="text-sm text-stone-700">虚线</span>
-                          <div className="w-8 h-0.5 border-t-2 border-dashed border-stone-400"></div>
+                          <span className="text-sm text-stone-700 font-medium">无线条</span>
+                          <div className="w-8 flex justify-center ml-2">
+                             <EyeSlashIcon className="w-4 h-4 text-stone-400" />
+                          </div>
                       </label>
                   </div>
               </div>
@@ -124,9 +126,15 @@ const RelationManager: React.FC<RelationManagerProps> = ({
                             <div className="flex items-center justify-between p-3 bg-white border border-stone-100 rounded hover:border-stone-300 transition-colors group shadow-sm hover:shadow">
                                 <div className="flex items-center gap-3">
                                     <div 
-                                        className={`w-8 h-0 border-t-2 ${def.style === 'solid' ? 'border-stone-800 border-solid' : 'border-stone-400 border-dashed'}`} 
-                                        title={def.style === 'solid' ? '实线' : '虚线'}
-                                    />
+                                        className="w-8 flex justify-center items-center"
+                                        title={def.style === 'solid' ? '实线' : '无线条 (隐式关系)'}
+                                    >
+                                        {def.style === 'solid' ? (
+                                            <div className="w-full h-0.5 bg-stone-800" />
+                                        ) : (
+                                            <EyeSlashIcon className="w-4 h-4 text-stone-300" />
+                                        )}
+                                    </div>
                                     <div>
                                         <div className="text-sm font-bold text-stone-800">{def.name}</div>
                                         <div className="text-[10px] text-stone-400">

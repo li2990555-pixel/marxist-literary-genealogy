@@ -126,6 +126,7 @@ const App: React.FC = () => {
       // Flatten data for Excel
       const excelData = books.map(book => {
         const lineage = lineages.find(l => l.id === book.lineageId);
+        const generation = lineage?.generations?.find(g => g.id === book.generationId);
         const parent = books.find(b => b.id === book.parentId);
         const relation = relationDefs.find(r => r.id === book.relationId);
     
@@ -135,8 +136,10 @@ const App: React.FC = () => {
           "书名": book.title,
           "出版社": book.publisher,
           "所属族系": lineage ? lineage.name : '未知',
+          "族系分代": generation ? generation.name : '',
           "底本来源": parent ? parent.title : '(族长/源头)',
           "底本关系": relation ? relation.name : '-',
+          "目录页/封面": book.tocUrl || '',
           "学术备注": book.description || ''
         };
       });
@@ -217,6 +220,10 @@ const App: React.FC = () => {
       setLineages(prev => prev.map(l => l.id === lineage.id ? lineage : l));
   };
 
+  const handleReorderLineages = (newLineages: Lineage[]) => {
+      setLineages(newLineages);
+  };
+
   const handleDeleteLineage = (id: string) => {
       if (booksCountByLineage[id] && booksCountByLineage[id] > 0) {
           alert('无法删除：该族系下仍有书籍数据。请先删除或迁移相关书籍。');
@@ -243,7 +250,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-stone-100 text-stone-800 flex flex-col overflow-hidden">
+    // Changed h-screen to h-full. Root html/body height is now 100%, making this reliable.
+    <div className="h-full w-full bg-stone-100 text-stone-800 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="bg-white border-b border-stone-200 flex-none z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
@@ -325,6 +333,7 @@ const App: React.FC = () => {
                     </button>
                 )}
              </div>
+             {/* Graph Container: Ensure it has flex-1 to fill space */}
              <div className="flex-1 border border-stone-200 rounded-xl overflow-hidden shadow-sm bg-stone-50 relative min-h-[500px]">
                  <GenealogyView 
                     books={books} 
@@ -376,6 +385,7 @@ const App: React.FC = () => {
          onAdd={handleAddLineage}
          onUpdate={handleUpdateLineage}
          onDelete={handleDeleteLineage}
+         onReorder={handleReorderLineages}
       />
 
       <RelationManager

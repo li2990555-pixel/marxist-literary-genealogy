@@ -15,10 +15,11 @@ import ReactFlow, {
 } from 'reactflow';
 import { Book, Lineage, RelationDef } from '../types';
 import { COLOR_PALETTES } from '../constants';
+import { EyeSlashIcon } from '@heroicons/react/24/outline';
 
 // --- Node 1: Book Card ---
 const CustomBookNode = ({ data }: NodeProps) => {
-  const { book, lineage, isRoot, isHighlighted, isDimmed } = data;
+  const { book, lineage, generation, isRoot, isHighlighted, isDimmed } = data;
   const colors = lineage ? COLOR_PALETTES[lineage.colorKey] : COLOR_PALETTES['stone'];
 
   let containerClass = `px-3 py-2 rounded shadow-sm border transition-all duration-300 w-[180px] cursor-grab active:cursor-grabbing `;
@@ -40,11 +41,19 @@ const CustomBookNode = ({ data }: NodeProps) => {
             <span className={`text-xs font-mono font-bold ${isHighlighted ? 'text-white/80' : 'text-stone-500'}`}>
                 {book.year}
             </span>
-            {isRoot && (
-                <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded border border-yellow-200">
-                    族长
-                </span>
-            )}
+            <div className="flex gap-1">
+                {isRoot && (
+                    <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded border border-yellow-200">
+                        族长
+                    </span>
+                )}
+                {/* Generation Badge */}
+                {generation && (
+                     <span className={`text-[10px] px-1 rounded border ${isHighlighted ? 'bg-white/20 text-white border-white/30' : 'bg-stone-100 text-stone-600 border-stone-200'}`}>
+                        {generation.name}
+                     </span>
+                )}
+            </div>
         </div>
         
         <div className={`font-serif text-sm font-bold leading-tight mb-1 ${isHighlighted ? 'text-white' : 'text-stone-800'}`}>
@@ -209,6 +218,10 @@ const GenealogyView: React.FC<GenealogyViewProps> = ({ books, lineages, relation
       // Fallback if lineage deleted but book exists
       const safeIndex = lineageIndex === -1 ? 0 : lineageIndex; 
       
+      const lineage = lineageMap[book.lineageId];
+      // Find generation info
+      const generation = lineage?.generations?.find(g => g.id === book.generationId);
+
       const baseY = (safeIndex * LANE_HEIGHT) + 80; // Top padding inside lane
         
       const key = `${book.year}-${book.lineageId}`;
@@ -227,7 +240,8 @@ const GenealogyView: React.FC<GenealogyViewProps> = ({ books, lineages, relation
         position: { x: finalX, y: finalY },
         data: { 
           book, 
-          lineage: lineageMap[book.lineageId],
+          lineage,
+          generation, // Pass generation
           isRoot: book.parentId === null,
           isHighlighted, 
           isDimmed 
@@ -237,26 +251,30 @@ const GenealogyView: React.FC<GenealogyViewProps> = ({ books, lineages, relation
       if (book.parentId) {
         // Look up relation definition
         const relationDef = relationMap[book.relationId];
-        const isSolid = relationDef ? relationDef.style === 'solid' : true; // Default to solid if missing
-        const isEdgeHighlighted = descendantsSet.has(book.parentId) && descendantsSet.has(book.id);
+        // Default to solid if unknown, but respect "none"
+        const style = relationDef ? relationDef.style : 'solid';
+        
+        // Only render edge if style is NOT 'none'
+        if (style !== 'none') {
+            const isEdgeHighlighted = descendantsSet.has(book.parentId) && descendantsSet.has(book.id);
 
-        flowEdges.push({
-          id: `e-${book.parentId}-${book.id}`,
-          source: book.parentId,
-          target: book.id,
-          type: 'smoothstep', 
-          animated: !isSolid, // Animate dashed lines
-          style: {
-            stroke: isEdgeHighlighted ? '#44403c' : '#d6d3d1', 
-            strokeWidth: isSolid ? 3 : 1.5,
-            strokeDasharray: isSolid ? '0' : '4,4',
-            opacity: (selectedNodeId && !isEdgeHighlighted) ? 0.2 : 1,
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: isEdgeHighlighted ? '#44403c' : '#d6d3d1',
-          },
-        });
+            flowEdges.push({
+              id: `e-${book.parentId}-${book.id}`,
+              source: book.parentId,
+              target: book.id,
+              type: 'smoothstep', 
+              animated: false, // Solid lines are not animated by default anymore
+              style: {
+                stroke: isEdgeHighlighted ? '#44403c' : '#d6d3d1', 
+                strokeWidth: 3,
+                opacity: (selectedNodeId && !isEdgeHighlighted) ? 0.2 : 1,
+              },
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: isEdgeHighlighted ? '#44403c' : '#d6d3d1',
+              },
+            });
+        }
       }
     });
 
@@ -345,8 +363,10 @@ const GenealogyView: React.FC<GenealogyViewProps> = ({ books, lineages, relation
         fitViewOptions={{ padding: 0.1 }}
         nodesDraggable={true} 
         attributionPosition="bottom-right"
-        minZoom={0.05} // Increased zoom out capability to fit all
+        minZoom={0.05} 
         maxZoom={1.5}
+        // Strict styling for browsers that struggle with flex height inheritance
+        style={{ width: '100%', height: '100%' }}
       >
         <Background color="#a8a29e" gap={40} size={1} variant={BackgroundVariant.Dots} className="opacity-10" />
         <Controls className="bg-white border-stone-200 shadow-sm" />
@@ -357,9 +377,16 @@ const GenealogyView: React.FC<GenealogyViewProps> = ({ books, lineages, relation
           <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3">谱系图例</h3>
           <div className="space-y-2 text-xs">
              {lineages.map(l => (
-                 <div key={l.id} className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-sm ${COLOR_PALETTES[l.colorKey]?.bg || 'bg-gray-500'}`}></div>
-                    <span className="text-stone-600 font-medium">{l.name}</span>
+                 <div key={l.id} className="flex flex-col gap-1 mb-2">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-sm ${COLOR_PALETTES[l.colorKey]?.bg || 'bg-gray-500'}`}></div>
+                        <span className="text-stone-600 font-medium">{l.name}</span>
+                    </div>
+                    {l.generations && l.generations.length > 0 && (
+                        <div className="pl-5 text-stone-400 text-[10px]">
+                            {l.generations.map(g => g.name).join(' · ')}
+                        </div>
+                    )}
                  </div>
              ))}
              
@@ -368,7 +395,13 @@ const GenealogyView: React.FC<GenealogyViewProps> = ({ books, lineages, relation
              {/* Relation Legend (Dynamic) */}
              {relationDefs.map(r => (
                  <div key={r.id} className="flex items-center gap-2">
-                    <div className={`w-8 h-[2px] ${r.style === 'solid' ? 'bg-stone-400' : 'border-t border-dashed border-stone-400'}`}></div>
+                    {r.style === 'solid' ? (
+                        <div className="w-8 h-[2px] bg-stone-400"></div>
+                    ) : (
+                        <div className="w-8 flex justify-center text-stone-300">
+                            <EyeSlashIcon className="w-3 h-3" />
+                        </div>
+                    )}
                     <span className="text-stone-500">{r.name}</span>
                  </div>
              ))}
