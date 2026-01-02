@@ -315,7 +315,7 @@ const App: React.FC = () => {
         {viewMode === 'graph' ? (
           <div className="flex-1 flex flex-col min-h-0">
              <div className="mb-4 text-sm text-stone-500 flex justify-between items-center flex-none">
-                <p>点击节点高亮其家族遗传链。横轴为时间线，纵轴为学术流派。</p>
+                <p>点击节点高亮其家族遗传链。横轴为时间线，纵轴为族系。</p>
                 {selectedNodeId && (
                     <button 
                         onClick={() => setSelectedNodeId(null)}
