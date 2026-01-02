@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>马克思主义文艺论著选本族谱图</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reactflow@11.10.1/dist/style.css" />
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f5f5f4; /* stone-100 */
+      }
+      .font-serif {
+        font-family: 'Noto Serif SC', serif;
+      }
+      /* React Flow base styles override */
+      .react-flow__edge-path {
+        stroke-width: 2;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "reactflow": "https://esm.sh/reactflow@11.10.1?deps=react@18.2.0,react-dom@18.2.0",
+    "@tanstack/react-table": "https://esm.sh/@tanstack/react-table@8.10.7?deps=react@18.2.0,react-dom@18.2.0",
+    "@heroicons/react/24/outline": "https://esm.sh/@heroicons/react@2.0.18/24/outline?deps=react@18.2.0",
+    "html-to-image": "https://esm.sh/html-to-image@1.11.11",
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@heroicons/react/": "https://esm.sh/@heroicons/react@^2.2.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Global error handler to catch white screen issues
+      window.addEventListener('error', function(event) {
+        console.error(event.error);
+        const root = document.getElementById('root');
+        if (root && root.innerHTML === '') {
+             document.body.innerHTML = '<div style="padding: 20px; color: red; font-family: monospace;"><h1>Application Error</h1><p>' + event.message + '</p><pre>' + (event.error && event.error.stack ? event.error.stack : '') + '</pre></div>';
+        }
+      });
+    </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
